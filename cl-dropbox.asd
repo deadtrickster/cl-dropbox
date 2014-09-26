@@ -17,7 +17,8 @@
   :components
   ((:module "src"
     :components
-    ((:file "ssl")
+    ((:file "conditions")
+     (:file "ssl")
      (:file "package")
      (:file "constants")
      (:file "http")
