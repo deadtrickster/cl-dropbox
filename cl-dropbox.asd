@@ -12,7 +12,7 @@
   :license "MIT"
   :author "Ilya Khaprov"
   :version "0.0.1" ;; freeze version for now
-  :depends-on (:drakma)
+  :depends-on (:drakma :log4cl)
   :serial t
   :components
   ((:module "src"

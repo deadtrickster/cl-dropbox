@@ -15,7 +15,7 @@
   (:documentation
    "A failure in the SSL library occurred..")
   (:report (lambda (condition stream)
-             (format stream "A failure in the SSL library occurred: ~A" (slot-value condition 'message)) (cl+ssl::format-ssl-error-queue stream (cl+ssl::ssl-error-queue condition)))))
+             (format stream "A failure in OpenSSL library occurred~@[: ~A~].~%" (slot-value condition 'message)) (cl+ssl::format-ssl-error-queue stream (cl+ssl::ssl-error-queue condition)))))
 
 (defun ssl-signal-error (&optional message)
   (error 'ssl-error-call :queue (cl+ssl::read-ssl-error-queue) :message message))
@@ -53,9 +53,10 @@
   (defun ssl-context ()
     "SSL context for Dropbox REST API connections"
     (unless ssl-ctx
+      (log:debug "Creating new SSL_CTX")
       ;; calling this explicitly here since
       ;; we want to create context before any call to make-ssl-client-stream
-      (handler-bind ((error #'(lambda (c) (declare (ignore c)) (setf ssl-ctx nil))))
+      (handler-bind ((error #'(lambda (c) (setf ssl-ctx nil) (log:error "Error while creating SSL Context: ~A" c))))
         (cl+ssl::ensure-initialized)
         (setf ssl-ctx (cl+ssl::ssl-ctx-new (cl+ssl::ssl-tlsv1-client-method)))
         (cl+ssl::ssl-ctx-set-session-cache-mode ssl-ctx cl+ssl::+ssl-sess-cache-client+)
@@ -81,7 +82,8 @@
                                                   AES256-SHA:~
                                                   AES128-GCM-SHA256:~
                                                   AES128-SHA256:~
-                                                  AES128-SHA"))
+                                                  AES128-SHA"
+                                                 ))
         ;; TODO more session handling
         ))
     ssl-ctx))
