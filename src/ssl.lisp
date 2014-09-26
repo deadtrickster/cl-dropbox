@@ -5,7 +5,7 @@
 (in-package :cl-user)
 
 (defpackage :cl-dropbox.ssl
-  (:use :cl)
+  (:use :cl :cl-dropbox.conditions)
   (:export #:ssl-context))
 
 (in-package :cl-dropbox.ssl)
@@ -20,9 +20,18 @@
 (defun ssl-signal-error (&optional message)
   (error 'ssl-error-call :queue (cl+ssl::read-ssl-error-queue) :message message))
 
+(defun get-cafile-namestring (file)
+  (handler-case
+      (if (pathnamep file)
+          (namestring (truename file))
+          (namestring (or (probe-file file) (error 'file-error :pathname file))))
+    (file-error (c)
+      (declare (ignorable c))
+      (error 'trusted-certificates-file-not-found :pathname file))))
+
 (defun add-verify-files% (ssl-ctx files)
   (dolist (file files)
-    (let ((namestring (if (pathnamep file) (namestring (truename file)) file)))
+    (let ((namestring (get-cafile-namestring file)))
       (cffi:with-foreign-strings ((cafile namestring))
         (when (eql 0 (cl+ssl::ssl-ctx-load-verify-locations
                       ssl-ctx
@@ -82,8 +91,7 @@
                                                   AES256-SHA:~
                                                   AES128-GCM-SHA256:~
                                                   AES128-SHA256:~
-                                                  AES128-SHA"
-                                                 ))
+                                                  AES128-SHA"))
         ;; TODO more session handling
         ))
     ssl-ctx))
