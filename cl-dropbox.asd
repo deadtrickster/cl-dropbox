@@ -11,6 +11,7 @@
   :description "Dropbox Core SDK in Common Lisp"
   :license "MIT"
   :author "Ilya Khaprov"
+  :version "0.0.1" ;; freeze version for now
   :depends-on (:drakma)
   :serial t
   :components
@@ -18,5 +19,6 @@
     :components
     ((:file "ssl")
      (:file "package")
+     (:file "constants")
      (:file "http")
      (:file "dropbox")))))
