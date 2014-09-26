@@ -53,24 +53,24 @@
       (cl+ssl::ssl-ctx-set-verify ssl-ctx cl+ssl::+SSL-VERIFY-PEER+ (cffi:callback cl+ssl::cb-ssl-verify))
       (cffi:with-foreign-string (ciphers (format nil
                                                  "ECDHE-RSA-AES256-GCM-SHA384:~
-                                                ECDHE-RSA-AES256-SHA384:~
-                                                ECDHE-RSA-AES256-SHA:~
-                                                ECDHE-RSA-AES128-GCM-SHA256:~
-                                                ECDHE-RSA-AES128-SHA256:~
-                                                ECDHE-RSA-AES128-SHA:~
-                                                ECDHE-RSA-RC4-SHA:~
-                                                DHE-RSA-AES256-GCM-SHA384:~
-                                                DHE-RSA-AES256-SHA256:~
-                                                DHE-RSA-AES256-SHA:~
-                                                DHE-RSA-AES128-GCM-SHA256:~
-                                                DHE-RSA-AES128-SHA256:~
-                                                DHE-RSA-AES128-SHA:~
-                                                AES256-GCM-SHA384:~
-                                                AES256-SHA256:~
-                                                AES256-SHA:~
-                                                AES128-GCM-SHA256:~
-                                                AES128-SHA256:~
-                                                AES128-SHA"))
+                                                  ECDHE-RSA-AES256-SHA384:~
+                                                  ECDHE-RSA-AES256-SHA:~
+                                                  ECDHE-RSA-AES128-GCM-SHA256:~
+                                                  ECDHE-RSA-AES128-SHA256:~
+                                                  ECDHE-RSA-AES128-SHA:~
+                                                  ECDHE-RSA-RC4-SHA:~
+                                                  DHE-RSA-AES256-GCM-SHA384:~
+                                                  DHE-RSA-AES256-SHA256:~
+                                                  DHE-RSA-AES256-SHA:~
+                                                  DHE-RSA-AES128-GCM-SHA256:~
+                                                  DHE-RSA-AES128-SHA256:~
+                                                  DHE-RSA-AES128-SHA:~
+                                                  AES256-GCM-SHA384:~
+                                                  AES256-SHA256:~
+                                                  AES256-SHA:~
+                                                  AES128-GCM-SHA256:~
+                                                  AES128-SHA256:~
+                                                  AES128-SHA"))
         (ssl-ctx-set-cipher-list ssl-ctx ciphers)        
         ;; TODO more session handling
         ))
