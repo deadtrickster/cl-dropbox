@@ -6,7 +6,7 @@
 
 (defmacro define-constant (name value &optional documentation)
   `(unless (boundp ',name)
-     (defconstant ,name ,value documentation)))
+     (defconstant ,name ,value ,documentation)))
 
 (define-constant +api-server+ "api.dropbox.com")
 (define-constant +api-content-server+ "api-content.dropbox.com")
