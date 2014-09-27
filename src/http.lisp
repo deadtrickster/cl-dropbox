@@ -4,11 +4,54 @@
 
 (in-package :cl-dropbox)
 
-(defun http-request-with-ssl (uri drakma-args)
+(cl-interpol:enable-interpol-syntax)
+
+(defclass request ()
+  ((headers :initarg :headers :accessor request-headers)
+   (body :initarg :body :accessor request-body)
+   (method :initarg :method :accessor request-method)
+   (path :initarg :uri :accessor request-path)
+   (params :initarg :query :accessor request-params)))
+
+(defgeneric request-url (request))
+
+(defclass api-request (request)
+  ())
+
+(defmethod request-url ((request api-request))
+  (make-instance 'puri:uri :scheme "https"
+                           :host +api-server+
+                           :path #?"#{+dropbox-api-version+}/#{request-path}"))
+
+(defclass content-request (request)
+  ())
+
+(defmethod request-url ((request content-request))
+  (make-instance 'puri:uri :scheme "https"
+                           :host +api-content-server+
+                           :path #?"#{+api-version+}/#{request-path}"))
+
+(defun add-header (request name value)
+  (setf (request-headers request) (acons name value (request-headers request))))
+
+(defclass response ()
+  ((status-code :initarg :status-code :reader response-status-code)
+   (headers :initarg :headers :reader response-headers)
+   (body :initarg :body :reader response-body)))
+
+(defun response-header (response name)
+  (drakma:header-value name (response-headers response)))
+
+(defun http-request-with-ssl (request)
   ;; do not replace cl+ssl global state, rebind
+  ;; connections cache not implemented yet so :close t
   (let* ((cl+ssl::*ssl-global-context* (ssl-context))
          (cl+ssl::*ssl-check-verify-p* t))
-    (apply #'drakma:http-request uri drakma-args)))
+    (drakma:http-request (request-url request) :method (request-method request)
+                                                       :parameters (request-params request)
+                                                       :content (request-body request)
+                                                       :additional-headers (request-headers request)
+                                                       :user-agent +user-agent+)))
 
 (defun ensure-string (response)
   (if (stringp response)
@@ -47,13 +90,12 @@
         (error ret :status-code status-code :response response-string :headers headers)
         response-string)))
 
-(defun http-request% (uri drakma-args)
-  ;; connections cache not implemented yet so :close t
+(defun http-request% (request)
   (multiple-value-bind (response status-code headers)
-      (http-request-with-ssl uri (append drakma-args (list :close t)))
+      (http-request-with-ssl request)
     (values (ensure-string-and-success response status-code headers) headers)))
 
-(defun http-request (uri &rest drakma-args)
+(defun http-request (request)
   (let ((retries 0))
     (tagbody
      :retry
@@ -62,4 +104,4 @@
                                                            (when (< retries *max-dropbox-server-error-retries*) (incf retries) (go :retry))))
                       (error (lambda (c)
                                (log:error c))))
-         (http-request% uri drakma-args)))))
+         (http-request% request)))))
