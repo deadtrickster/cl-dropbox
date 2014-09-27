@@ -5,5 +5,5 @@
 (in-package :cl-user)
 
 (defpackage :cl-dropbox
-  (:use :common-lisp :cl-dropbox.ssl)
+  (:use :common-lisp :cl-dropbox.ssl :cl-dropbox.conditions)
   (:nicknames :dropbox))

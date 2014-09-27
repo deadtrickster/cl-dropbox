@@ -12,7 +12,7 @@
   :license "MIT"
   :author "Ilya Khaprov"
   :version "0.0.1" ;; freeze version for now
-  :depends-on (:drakma :log4cl)
+  :depends-on (:drakma :log4cl :trivial-utf-8)
   :serial t
   :components
   ((:module "src"
@@ -21,5 +21,6 @@
      (:file "ssl")
      (:file "package")
      (:file "constants")
+     (:file "parameters")
      (:file "http")
      (:file "dropbox")))))

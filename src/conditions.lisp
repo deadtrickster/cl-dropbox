@@ -6,7 +6,18 @@
 
 (defpackage :cl-dropbox.conditions
   (:use :cl)
-  (:export #:trusted-certificates-file-not-found))
+  (:export #:trusted-certificates-file-not-found
+           #:cl-dropbox-api-error
+           #:cl-dropbox-api-bad-input
+           #:cl-dropbox-api-unauthorized
+           #:cl-dropbox-api-forbidden
+           #:cl-dropbox-api-notfound
+           #:cl-dropbox-api-method-not-expected
+           #:cl-dropbox-api-too-many-requests
+           #:cl-dropbox-api-oauth1.0-rate-limited
+           #:cl-dropbox-api-transient-server-error
+           #:cl-dropbox-api-over-quota
+           #:cl-dropbox-api-error-non-standard))
 
 (in-package :cl-dropbox.conditions)
 
@@ -14,9 +25,43 @@
   ()
   (:documentation "Base error class for all cl-dropbox errors"))
 
+
 (define-condition cl-dropbox-api-error (cl-dropbox-error-base)
-  ()
+  ((status-code :initarg :status-code :reader api-error-status-code)
+   (response :initarg :responmse :reader api-error-response)
+   (headers :initarg :headers :reader api-error-headers))
   (:documentation "Base error class for errors returned by Dropbox API servers"))
+
+(define-condition cl-dropbox-api-bad-input (cl-dropbox-api-error)
+  ())
+
+(define-condition cl-dropboxx-api-unauthorized (cl-dropbox-api-error)
+  ())
+
+(define-condition cl-dropbox-api-forbidden (cl-dropbox-api-error)
+  ())
+
+(define-condition cl-dropbox-api-notfound (cl-dropbox-api-error)
+  ())
+
+(define-condition cl-dropbox-api-method-not-expected (cl-dropbox-api-error)
+  ())
+
+(define-condition cl-dropbox-api-too-many-requests (cl-dropbox-api-error)
+  ())
+
+(define-condition cl-dropbox-api-oauth1.0-rate-limited (cl-dropbox-api-error)
+  ())
+
+(define-condition cl-dropbox-api-transient-server-error (cl-dropbox-api-error)
+  ())
+
+(define-condition cl-dropbox-api-over-quota (cl-dropbox-api-error)
+  ())
+
+(define-condition cl-dropbox-api-error-non-standard (cl-dropbox-api-error)
+  ())
+
 
 (define-condition cl-dropbox-error (cl-dropbox-error-base)
   ()
@@ -27,3 +72,4 @@
   (:documentation "Unable to find trusted certificates. Used as cafile")
   (:report (lambda (condition stream)
              (format stream "Unable to find trusted certificates. Path: ~A" (slot-value condition 'pathname)))))
+
