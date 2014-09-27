@@ -4,4 +4,4 @@
 
 (in-package :cl-dropbox)
 
-(defparameter *max-dropobx-server-error-retries* 3)
+(defparameter *max-dropbox-server-error-retries* 3)

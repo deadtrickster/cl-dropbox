@@ -59,7 +59,7 @@
      :retry
        (handler-bind ((cl-dropbox-transient-server-error (lambda (c)
                                                            (log:error c)
-                                                           (when (< retries *max-dropobx-server-error-retries*) (incf retries) (go :retry))))
+                                                           (when (< retries *max-dropbox-server-error-retries*) (incf retries) (go :retry))))
                       (error (lambda (c)
                                (log:error c))))
          (http-request% uri drakma-args)))))
