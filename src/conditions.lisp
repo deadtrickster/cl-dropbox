@@ -27,9 +27,7 @@
 
 
 (define-condition cl-dropbox-api-error (cl-dropbox-error-base)
-  ((status-code :initarg :status-code :reader api-error-status-code)
-   (response :initarg :responmse :reader api-error-response)
-   (headers :initarg :headers :reader api-error-headers))
+  ((response :initarg :response :reader api-error-response))
   (:documentation "Base error class for errors returned by Dropbox API servers"))
 
 (define-condition cl-dropbox-api-bad-input (cl-dropbox-api-error)
