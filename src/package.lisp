@@ -6,4 +6,6 @@
 
 (defpackage :cl-dropbox
   (:use :common-lisp :cl-dropbox.ssl :cl-dropbox.conditions)
-  (:nicknames :dropbox))
+  (:nicknames :dropbox)
+  (:shadow #:search
+           #:delete))
