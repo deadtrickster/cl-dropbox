@@ -10,6 +10,7 @@
 
 (define-constant +api-server+ "api.dropbox.com")
 (define-constant +api-content-server+ "api-content.dropbox.com")
+(define-constant +api-notify-server+ "api-notify.dropbox.com")
 (define-constant +web-server+ "www.dropbox.com")
 
 (define-constant +api-version+ 1)
