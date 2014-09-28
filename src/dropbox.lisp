@@ -15,19 +15,17 @@
 
 
 (defun http-request (request)
-  (let ((retries 0)
-        (response))
+  (let ((retries 0))
     (when (request-requires-signature request)
       (dropbox-sign-request *dropbox* request))
-    (tagbody
+    (prog ()
      :retry
        (handler-bind ((cl-dropbox-api-transient-server-error (lambda (c)
                                                                (log:error c)
                                                                (when (< retries *max-dropbox-server-error-retries*) (incf retries) (go :retry))))
                       (error (lambda (c)
                                (log:error c))))
-         (setf response (process-response (http-request% request)))))
-    response))
+         (return (process-response (http-request% request)))))))
 
 (defun process-response (response)
   (when (and (header-value response "content-type")
@@ -70,7 +68,9 @@
       (t 'cl-dropbox-api-error-non-standard))
     (if error-type
         (error error-type :response response)
-        (response-body response))))
+        (alexandria:if-let ((x-metadata (header-value response "x-dropbox-metadata")))
+          (values (response-body response) (yason:parse x-metadata))
+          (response-body response)))))
 
 (defun expand-parameters (parameters)
   (loop for parameter in parameters
