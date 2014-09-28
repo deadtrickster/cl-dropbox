@@ -61,7 +61,7 @@
       (t 'cl-dropbox-api-error-non-standard))
     (if error-type
         (error error-type :response response)
-        response)))
+        (response-body response))))
 
 
 (defun account-info (&optional (locale "en"))
