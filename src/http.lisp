@@ -7,35 +7,45 @@
 (cl-interpol:enable-interpol-syntax)
 
 (defclass request ()
-  ((headers :initform nil :initarg :headers :accessor request-headers)
+  ((host :initarg :host)
+   (headers :initform nil :initarg :headers :accessor request-headers)
    (body :initform nil  :initarg :body :accessor request-body)
    (method :initform :get  :initarg :method :accessor request-method)
    (path :initform nil  :initarg :path :accessor request-path)
    (params :initform nil  :initarg :params :accessor request-params)))
+
+(defmethod request-url ((request request))
+  (make-instance 'puri:uri :scheme :https
+                           :host (slot-value request 'host)
+                           :path (if (listp (request-path request))
+                                     (let ((cl-interpol:*list-delimiter* #\/))
+                                       #?"/${+api-version+}/@{(request-path request)}")
+                                     #?"/${+api-version+}/${(request-path request)}")))
 
 (defclass response ()
   ((status-code :initarg :status-code :reader response-status-code)
    (headers :initarg :headers :reader response-headers)
    (body :initarg :body :reader response-body)))
 
-
 (defgeneric request-url (request))
 
 (defclass api-request (request)
-  ())
+  ()
+  (:default-initargs :host +api-server+))
 
-(defmethod request-url ((request api-request))
-  (make-instance 'puri:uri :scheme :https
-                           :host +api-server+
-                           :path #?"/${+api-version+}/${(request-path request)}"))
+(defclass api-content-request (request)
+  ()
+  (:default-initargs :host +api-content-server+))
 
-(defclass content-request (request)
-  ())
+(defclass api-notify-request (request)
+  ()
+  (:default-initargs :host +api-notify-server+ :method :get))
 
-(defmethod request-url ((request content-request))
-  (make-instance 'puri:uri :scheme :https
-                           :host +api-content-server+
-                           :path #?"/${+api-version+}/${(request-path request)}"))
+(defmethod request-requires-signature ((request request))
+  t)
+
+(defmethod request-requires-signature ((request api-notify-request))
+  nil)
 
 
 (defun header-value (response name)
