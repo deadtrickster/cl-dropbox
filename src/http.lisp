@@ -22,11 +22,6 @@
                                        #?"/${+api-version+}/@{(request-path request)}")
                                      #?"/${+api-version+}/${(request-path request)}")))
 
-(defclass response ()
-  ((status-code :initarg :status-code :reader response-status-code)
-   (headers :initarg :headers :reader response-headers)
-   (body :initarg :body :reader response-body)))
-
 (defgeneric request-url (request))
 
 (defclass api-request (request)
@@ -64,19 +59,31 @@
   (let* ((cl+ssl::*ssl-global-context* (ssl-context))
          (cl+ssl::*ssl-check-verify-p* t))
     (drakma:http-request (request-url request) :method (request-method request)
-                                                       :parameters (request-params request)
-                                                       :content (request-body request)
-                                                       :additional-headers (request-headers request)
-                                                       :user-agent +user-agent+)))
+                                               :parameters (request-params request)
+                                               :content (request-body request)
+                                               :additional-headers (request-headers request)
+                                               :user-agent +user-agent+
+                                               :content-type nil)))
 
 (defun ensure-string (response)
   (if (stringp response)
       response
       (trivial-utf-8:utf-8-bytes-to-string response)))
 
+
+(defclass response ()
+  ((status-code :initarg :status-code :reader response-status-code)
+   (headers :initarg :headers :reader response-headers)
+   (body :initarg :body :reader response-body)))
+
 (defun http-request% (request)
   (multiple-value-bind (response status-code headers)
       (http-request-with-ssl request)
-    (make-instance 'response :body response :headers headers :status-code status-code)))
-
-
+    (if (functionp response)
+        (lambda (content &optional continue)
+          (if continue
+              (funcall response content t)
+              (multiple-value-bind (response status-code headers)
+                  (funcall response content nil)
+                (process-response (make-instance 'response :body response :headers headers :status-code status-code)))))
+        (make-instance 'response :body response :headers headers :status-code status-code))))
