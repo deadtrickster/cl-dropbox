@@ -16,3 +16,5 @@
 (define-constant +api-version+ 1)
 
 (define-constant +user-agent+ (concatenate 'string "CL-DROPBOX/" (asdf:component-version (asdf:find-system :cl-dropbox))))
+
+(define-constant +uploading-buffer-size+ 4096)

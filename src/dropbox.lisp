@@ -27,7 +27,10 @@
                                (log:error c))))
          (return (process-response (http-request% request)))))))
 
-(defun process-response (response)
+(defmethod process-response ((continuation function))
+  continuation)
+
+(defmethod process-response ((response response))
   (when (and (header-value response "content-type")
              (or
               (alexandria:starts-with-subseq "text/" (header-value response "content-type"))
@@ -108,11 +111,33 @@
 
 (define-api-call (get-account-info () ("locale"))
   (http-request (make-instance 'api-request :path "account/info"
-                                            )))
+                               )))
 
 (define-api-call (get-file (path) ("rev"))
   (http-request (make-instance 'api-content-request :path (list "files/auto" path)
                                                     :params parameters)))
+
+(defun put-file (path file-path)
+  (with-open-file (stream file-path
+                          :direction :input
+                          :element-type '(unsigned-byte 8))
+    (let* ((to-send (file-length stream))
+           (uploading-cont
+             (http-request (make-instance 'api-content-request :path (list "files_put/auto" path)
+                                                               :method :put
+                                                               :headers `(("Content-Length" . ,to-send)
+                                                                          ("Content-Type" . "application/octet-stream"))
+                                                               :body :continuation)))
+           (buf (make-array +uploading-buffer-size+ :element-type '(unsigned-byte 8))))
+      (loop
+        (let ((chunk-size (min +uploading-buffer-size+ to-send)))
+          (unless (eql chunk-size (read-sequence buf stream :end chunk-size))
+            (error 'end-of-file :stream stream))
+          (decf to-send chunk-size)
+          (if (zerop to-send)
+              (return
+                (funcall uploading-cont buf nil))
+              (funcall uploading-cont buf t)))))))
 
 (define-api-call (metadata (path) ("file_limit"
                                    "hash"
@@ -122,7 +147,7 @@
                                    "locale"
                                    "include_media_info"))
   (http-request (make-instance 'api-request :path (list "metadata/auto" path)
-                                            :params parameters)))
+                                            :params parameters)))))
 
 (define-api-call (delta (cursor) ("path_prefix"
                                   "locale"
@@ -149,14 +174,14 @@
 (define-api-call (restore (path) ("rev"
                                   "locale"))
   (http-request (make-instance 'api-request :path (list "restore/auto" path)
-                                           :params parameters)))
+                                            :params parameters)))
 
 (define-api-call (search (path query) ("file_limit"
                                        "include_deleted"
                                        "locale"))
   (http-request (make-instance 'api-request :path (list "search/auto" path)
-                                           :method :post
-                                           :params (acons "query" query parameters))))
+                                            :method :post
+                                            :params (acons "query" query parameters))))
 
 (define-api-call (get-share-link (path) ("short_url"
                                          "locale"))
