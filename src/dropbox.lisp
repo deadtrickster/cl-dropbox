@@ -21,10 +21,10 @@
     (prog ()
      :retry
        (handler-bind ((cl-dropbox-api-transient-server-error (lambda (c)
-                                                               (log:error c)
-                                                               (when (< retries *max-dropbox-server-error-retries*) (incf retries) (go :retry))))
+                                                                (log:error c)
+                                                                (when (< retries *max-dropbox-server-error-retries*) (incf retries) (go :retry))))
                       (error (lambda (c)
-                               (log:error c))))
+                                (log:error c))))
          (return (process-response (http-request% request)))))))
 
 (defmethod process-response ((continuation function))
@@ -75,26 +75,30 @@
           (values (response-body response) (yason:parse x-metadata))
           (response-body response)))))
 
-(defun expand-parameters (parameters)
-  (loop for parameter in parameters
-        as parameter-name = (if (consp parameter) (car parameter) parameter)
-        as parameter-default = (if (consp parameter) (cdr parameter) nil)
-        collect `(,(symbol-munger:underscores->lisp-symbol parameter-name)
-                  ,parameter-name
-                  ,parameter-default
-                  ,(symbol-munger:underscores->lisp-symbol (concatenate 'string parameter-name "-supplied-p")))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun expand-parameters (parameters)
+    (loop for parameter in parameters
+          as parameter-name = (if (consp parameter) (car parameter) parameter)
+          as parameter-default = (if (consp parameter) (cdr parameter) nil)
+          collect `(,(symbol-munger:underscores->lisp-symbol parameter-name)
+                    ,parameter-name
+                    ,parameter-default
+                    ,(if parameter-default t (symbol-munger:underscores->lisp-symbol (concatenate 'string parameter-name "-supplied-p"))))))
 
-(defun build-api-call-key-args (parameters)
-  (loop for parameter in parameters
-        collect `(,(first parameter)
-                  ,(third parameter)
-                  ,(fourth parameter))))
+  (defun build-api-call-key-args (parameters)
+    (loop for parameter in parameters
+          collect (if (eq t (fourth parameter))
+                      `(,(first parameter)
+                        ,(third parameter))
+                      `(,(first parameter)
+                        ,(third parameter)
+                        ,(fourth parameter)))))
 
-(defun generate-parameters-collector (key-args)
-  (loop for key-arg in key-args
-        collect
-           `(if ,(fourth key-arg)
-                (setf parameters (acons ,(second key-arg) ,(first key-arg) parameters)))))
+  (defun generate-parameters-collector (key-args)
+    (loop for key-arg in key-args
+          collect
+             `(if ,(fourth key-arg)
+                  (setf parameters (acons ,(second key-arg) ,(first key-arg) parameters))))))
 
 (defmacro define-api-call ((name required-args parameters) &body body)
   (let* ((parameters (expand-parameters parameters))
@@ -121,23 +125,27 @@
   (with-open-file (stream file-path
                           :direction :input
                           :element-type '(unsigned-byte 8))
-    (let* ((to-send (file-length stream))
-           (uploading-cont
-             (http-request (make-instance 'api-content-request :path (list "files_put/auto" path)
-                                                               :method :put
-                                                               :headers `(("Content-Length" . ,to-send)
-                                                                          ("Content-Type" . "application/octet-stream"))
-                                                               :body :continuation)))
-           (buf (make-array +uploading-buffer-size+ :element-type '(unsigned-byte 8))))
-      (loop
-        (let ((chunk-size (min +uploading-buffer-size+ to-send)))
-          (unless (eql chunk-size (read-sequence buf stream :end chunk-size))
-            (error 'end-of-file :stream stream))
-          (decf to-send chunk-size)
-          (if (zerop to-send)
-              (return
-                (funcall uploading-cont buf nil))
-              (funcall uploading-cont buf t)))))))
+    (let* ((to-send (file-length stream))) ;;TODO: check length > 150M
+      (put-stream path stream length))))
+
+(defun put-stream (path stream length)
+  (let* ((to-send length)
+         (uploading-cont
+           (http-request (make-instance 'api-content-request :path (list "files_put/auto" path)
+                                                             :method :put
+                                                             :headers `(("Content-Length" . ,to-send)
+                                                                        ("Content-Type" . "application/octet-stream"))
+                                                             :body :continuation)))
+         (buf (make-array +uploading-buffer-size+ :element-type '(unsigned-byte 8))))
+    (loop
+      (let ((chunk-size (min +uploading-buffer-size+ to-send)))
+        (unless (eql chunk-size (read-sequence buf stream :end chunk-size))
+          (error 'end-of-file :stream stream))
+        (decf to-send chunk-size)
+        (if (zerop to-send)
+            (return
+              (funcall uploading-cont buf nil))
+            (funcall uploading-cont buf t))))))
 
 (define-api-call (metadata (path) ("file_limit"
                                    "hash"
@@ -147,7 +155,7 @@
                                    "locale"
                                    "include_media_info"))
   (http-request (make-instance 'api-request :path (list "metadata/auto" path)
-                                            :params parameters)))))
+                                            :params parameters)))
 
 (define-api-call (delta (cursor) ("path_prefix"
                                   "locale"
