@@ -128,13 +128,14 @@
     (let* ((to-send (file-length stream))) ;;TODO: check length > 150M
       (put-stream path stream length))))
 
-(defun put-stream (path stream length)
+(defun put-stream (path stream length &key (content-type "application-actet-stream") (content-encoding "identity"))
   (let* ((to-send length)
          (uploading-cont
            (http-request (make-instance 'api-content-request :path (list "files_put/auto" path)
                                                              :method :put
                                                              :headers `(("Content-Length" . ,to-send)
-                                                                        ("Content-Type" . "application/octet-stream"))
+                                                                        ("Content-Type" . ,content-type)
+                                                                        ("Content-Encoding" . ,content-encoding))
                                                              :body :continuation)))
          (buf (make-array +uploading-buffer-size+ :element-type '(unsigned-byte 8))))
     (loop
@@ -146,6 +147,25 @@
             (return
               (funcall uploading-cont buf nil))
             (funcall uploading-cont buf t))))))
+
+(defun put-url (path url &key content-type)
+  (multiple-value-bind (body-stream status-code headers _uri _stream must-close reason-phrase)
+      (drakma:http-request url :want-stream t  :force-binary t)
+    (declare (ignore _uri _stream))
+    (unless (and (< status-code 300)
+                 (>= status-code 200))      
+      (error 'cl-dropbox-api-bad-input (make-instance 'response :body #?"Request to ${url} failed with reason: ${reason-phrase}" :headers headers :status-code status-code)))
+    (let* ((content-length (and (drakma:header-value :content-length headers) (parse-integer (drakma:header-value :content-length headers))))
+           (stream (if content-length
+                       (flexi-streams:flexi-stream-stream body-stream)
+                       (let* ((body-bytes (drakma::read-body body-stream headers nil)))
+                         (flexi-streams:make-in-memory-input-stream body-bytes)))))
+      (unwind-protect
+           (put-stream path stream content-length :content-type (or content-type (drakma:header-value :content-type headers))
+                                                  :content-encoding (or (drakma:header-value :content-encoding headers) "identity")))
+      (if must-close
+          (close body-stream)
+          (close stream)))))
 
 (define-api-call (metadata (path) ("file_limit"
                                    "hash"
