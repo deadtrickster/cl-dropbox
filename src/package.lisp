@@ -8,4 +8,7 @@
   (:use :common-lisp :cl-dropbox.ssl :cl-dropbox.conditions)
   (:nicknames :dropbox)
   (:shadow #:search
-           #:delete))
+           #:delete)
+  (:export #:dropbox
+           #:create-folder
+           #:put-url))
