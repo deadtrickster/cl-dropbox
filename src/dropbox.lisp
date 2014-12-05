@@ -4,6 +4,8 @@
 
 (in-package :cl-dropbox)
 
+(cl-interpol:enable-interpol-syntax)
+
 (defclass Dropbox ()
   ((access-token :initarg :access-token :reader access-token)))
 
@@ -126,7 +128,7 @@
                           :direction :input
                           :element-type '(unsigned-byte 8))
     (let* ((to-send (file-length stream))) ;;TODO: check length > 150M
-      (put-stream path stream length))))
+      (put-stream path stream to-send))))
 
 (defun put-stream (path stream length &key (content-type "application-actet-stream") (content-encoding "identity"))
   (let* ((to-send length)
@@ -177,9 +179,10 @@
   (http-request (make-instance 'api-request :path (list "metadata/auto" path)
                                             :params parameters)))
 
-(define-api-call (delta (cursor) ("path_prefix"
-                                  "locale"
-                                  "include_media_info"))
+(define-api-call (delta () ("cursor"
+                            "path_prefix"
+                            "locale"
+                            "include_media_info"))
   (http-request (make-instance 'api-request :path "delta"
                                             :method :post
                                             :params (acons "cursor" cursor parameters))))
