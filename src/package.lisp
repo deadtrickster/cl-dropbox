@@ -10,5 +10,22 @@
   (:shadow #:search
            #:delete)
   (:export #:dropbox
+           #:put-file
+           #:put-stream
+           #:put-url
+           #:metadata
+           #:delta
+           #:latest-cursor
+           #:longpool-delta
+           #:revisions
+           #:restore
+           #:search
+           #:get-share-link
+           #:get-direct-link
+           #:get-copy-ref
+           #:get-thumbnail
+           #:get-preview
+           #:copy
            #:create-folder
-           #:put-url))
+           #:delete
+           #:move))
