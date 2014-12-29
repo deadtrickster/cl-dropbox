@@ -13,6 +13,7 @@
            #:put-file
            #:put-stream
            #:put-url
+           #:get-file
            #:metadata
            #:delta
            #:latest-cursor
