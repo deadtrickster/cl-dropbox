@@ -123,6 +123,11 @@
   (http-request (make-instance 'api-content-request :path (list "files/auto" path)
                                                     :params parameters)))
 
+(defun maybe-add-leading-slash (path)
+  (if (eql #\/ (aref path 0))
+      path
+      (concatenate 'string "/" path)))
+
 (defun put-file (path file-path)
   (with-open-file (stream file-path
                           :direction :input
@@ -133,7 +138,7 @@
 (defun put-stream (path stream length &key (content-type "application-actet-stream") (content-encoding "identity"))
   (let* ((to-send length)
          (uploading-cont
-           (http-request (make-instance 'api-content-request :path (list "files_put/auto" path)
+           (http-request (make-instance 'api-content-request :path (list "files_put/auto" (maybe-add-leading-slash path))
                                                              :method :put
                                                              :headers `(("Content-Length" . ,to-send)
                                                                         ("Content-Type" . ,content-type)
@@ -151,9 +156,9 @@
             (funcall uploading-cont buf t))))))
 
 (defun put-url (path url &key content-type)
-  (multiple-value-bind (body-stream status-code headers _uri _stream must-close reason-phrase)
+  (multiple-value-bind (body-stream status-code headers _uri _stream _must-close reason-phrase)
       (drakma:http-request url :want-stream t  :force-binary t)
-    (declare (ignore _uri _stream))
+    (declare (ignore _uri _stream _must-close))
     (unless (and (< status-code 300)
                  (>= status-code 200))      
       (error 'cl-dropbox-api-bad-input (make-instance 'response :body #?"Request to ${url} failed with reason: ${reason-phrase}" :headers headers :status-code status-code)))
@@ -165,9 +170,8 @@
       (unwind-protect
            (put-stream path stream content-length :content-type (or content-type (drakma:header-value :content-type headers))
                                                   :content-encoding (or (drakma:header-value :content-encoding headers) "identity")))
-      (if must-close
-          (close body-stream)
-          (close stream)))))
+      (close body-stream)
+      (close stream))))
 
 (define-api-call (metadata (path) ("file_limit"
                                    "hash"
