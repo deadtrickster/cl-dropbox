@@ -14,13 +14,25 @@
    (path :initform nil  :initarg :path :accessor request-path)
    (params :initform nil  :initarg :params :accessor request-params)))
 
+(defun escape (str &optional (safe "/"))
+  "URI encodes/escapes the given string."
+  (with-output-to-string (s)
+    (loop for c across (flexi-streams:string-to-octets str :external-format :latin-1)
+          do (if (or (find (code-char c) safe)
+                     (<= 48 c 57)
+                     (<= 65 c 90)
+                     (<= 97 c 122)
+                     (find c '(45 95 46 126)))
+              (write-char (code-char c) s)
+              (format s "%~2,'0x" c)))))
+
 (defmethod request-url ((request request))
   (make-instance 'puri:uri :scheme :https
                            :host (slot-value request 'host)
-                           :path (if (listp (request-path request))
-                                     (let ((cl-interpol:*list-delimiter* #\/))
-                                       #?"/${+api-version+}/@{(request-path request)}")
-                                     #?"/${+api-version+}/${(request-path request)}")))
+                           :path (escape (if (listp (request-path request))
+                                             (let ((cl-interpol:*list-delimiter* #\/))
+                                               #?"/${+api-version+}/@{(request-path request)}")
+                                             #?"/${+api-version+}/${(request-path request)}"))))
 
 (defgeneric request-url (request))
 
