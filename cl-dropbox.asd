@@ -11,7 +11,7 @@
   :description "Dropbox Core SDK in Common Lisp"
   :license "MIT"
   :author "Ilya Khaprov"
-  :version "0.0.1" ;; freeze version for now
+  :version "0.1.0"
   :depends-on (:drakma :log4cl :trivial-utf-8 :cl-interpol :ia-hash-table :yason)
   :serial t
   :components
