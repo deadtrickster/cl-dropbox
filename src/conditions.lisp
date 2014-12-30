@@ -33,7 +33,7 @@
 (define-condition cl-dropbox-api-bad-input (cl-dropbox-api-error)
   ())
 
-(define-condition cl-dropboxx-api-unauthorized (cl-dropbox-api-error)
+(define-condition cl-dropbox-api-unauthorized (cl-dropbox-api-error)
   ())
 
 (define-condition cl-dropbox-api-forbidden (cl-dropbox-api-error)

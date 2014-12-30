@@ -47,9 +47,8 @@
   (let* ((status-code (response-status-code response))
          (error-type))
     (cond
-      ((and (>= 200 status-code)
-            (< 300 status-code))
-       (setf error-type response))
+      ((and (>= status-code 200)
+            (< status-code 300)))
       ((= status-code 400)
        (setq error-type 'cl-dropbox-api-bad-input))
       ((= status-code 401)
@@ -70,7 +69,7 @@
        (setq error-type 'cl-dropbox-api-over-quota))
       ((and (>= status-code 500) (< status-code 600))
        (setq error-type 'cl-dropbox-api-server-error))
-      (t 'cl-dropbox-api-error-non-standard))
+      (t (setq error-type 'cl-dropbox-api-error-non-standard)))
     (if error-type
         (error error-type :response response)
         (alexandria:if-let ((x-metadata (header-value response "x-dropbox-metadata")))
