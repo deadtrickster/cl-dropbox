@@ -65,7 +65,7 @@
         (rplacd header value)
         (setf (request-headers request) (acons name value (request-headers request))))))
 
-(defun http-request-with-ssl (request)
+(defun http-request-with-ssl (request &key want-stream)
   ;; do not replace cl+ssl global state, rebind
   ;; connections cache not implemented yet so :close t
   (let* ((cl+ssl::*ssl-global-context* (ssl-context))
@@ -75,7 +75,8 @@
                                                :content (request-body request)
                                                :additional-headers (request-headers request)
                                                :user-agent +user-agent+
-                                               :content-type nil)))
+                                               :content-type nil
+                                               :want-stream want-stream)))
 
 (defun ensure-string (response)
   (if (stringp response)
@@ -88,9 +89,9 @@
    (headers :initarg :headers :reader response-headers)
    (body :initarg :body :reader response-body)))
 
-(defun http-request% (request)
+(defun http-request% (request &key want-stream)
   (multiple-value-bind (response status-code headers)
-      (http-request-with-ssl request)
+      (http-request-with-ssl request :want-stream want-stream)
     (if (functionp response)
         (lambda (content &optional continue)
           (if continue

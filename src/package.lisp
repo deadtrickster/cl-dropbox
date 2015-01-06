@@ -14,6 +14,7 @@
            #:put-stream
            #:put-url
            #:get-file
+           #:get-stream
            #:metadata
            #:delta
            #:latest-cursor

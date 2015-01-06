@@ -16,27 +16,29 @@
 (defvar *dropbox*) ;; current dropbox session
 
 
-(defun http-request (request)
+(defun http-request (request &key want-stream)
   (let ((retries 0))
     (when (request-requires-signature request)
       (dropbox-sign-request *dropbox* request))
     (prog ()
      :retry
        (handler-bind ((cl-dropbox-api-transient-server-error (lambda (c)
-                                                                (log:error c)
-                                                                (when (< retries *max-dropbox-server-error-retries*) (incf retries) (go :retry))))
+                                                               (log:error c)
+                                                               (when (< retries *max-dropbox-server-error-retries*) (incf retries) (go :retry))))
                       (error (lambda (c)
-                                (log:error c))))
-         (return (process-response (http-request% request)))))))
+                               (log:error c))))
+         (return (process-response (http-request% request :want-stream want-stream)))))))
 
 (defmethod process-response ((continuation function))
   continuation)
 
 (defmethod process-response ((response response))
-  (when (and (header-value response "content-type")
-             (or
-              (alexandria:starts-with-subseq "text/" (header-value response "content-type"))
-              (equal "application/json" (header-value response "content-type"))))
+  (when (and
+         (not (typep (slot-value response 'body) 'stream))
+         (header-value response "content-type")
+         (or
+          (alexandria:starts-with-subseq "text/" (header-value response "content-type"))
+          (equal "application/json" (header-value response "content-type"))))
     (setf (slot-value response 'body) (ensure-string (response-body response)))
     (if (or (equal "application/json" (header-value response "content-type"))
             (equal "text/javascript" (header-value response "content-type")))
@@ -122,6 +124,13 @@
   (http-request (make-instance 'api-content-request :path (list "files/auto" path)
                                                     :params parameters)))
 
+(defun get-stream (path &key (rev nil rev-supplied-p))
+  (let ((parameters (if rev-supplied-p
+                        (cons (cons "rev" rev) nil))))    
+    (http-request
+     (make-instance 'api-content-request :path (list "files/auto" path) :params
+                    parameters) :want-stream t)))
+
 (defun maybe-add-leading-slash (path)
   (if (eql #\/ (aref path 0))
       path
@@ -154,23 +163,34 @@
               (funcall uploading-cont buf nil))
             (funcall uploading-cont buf t))))))
 
+(defmacro with-url-binary-stream ((stream-var url headers content-length) &body body)
+  (alexandria:with-gensyms (body-stream status-code _uri _stream _must-close reason-phrase body-bytes)
+    `(multiple-value-bind (,body-stream ,status-code ,headers ,_uri ,_stream ,_must-close ,reason-phrase)
+         (drakma:http-request ,url :want-stream t  :force-binary t)
+       (declare (ignore ,_uri ,_stream ,_must-close))
+       (unless (and (< ,status-code 300)
+                    (>= ,status-code 200))
+         (error 'cl-dropbox-api-bad-input (make-instance 'response :body (format nil "Request to ~a failed with reason: ~a" ,url ,reason-phrase) :headers ,headers :status-code ,status-code)))
+       (let* ((,content-length (and (drakma:header-value :content-length ,headers) (parse-integer (drakma:header-value :content-length ,headers))))
+              (,stream-var (if ,content-length
+                           (flexi-streams:flexi-stream-stream ,body-stream)
+                           (let* ((,body-bytes (drakma::read-body ,body-stream ,headers nil)))
+                             (flexi-streams:make-in-memory-input-stream ,body-bytes)))))
+         (unwind-protect
+              (progn
+                ,@body))
+         (close ,body-stream)
+         (close ,stream-var)))))
+
+(with-url-binary-stream (stream url headers content-length)
+    (put-stream path stream content-length :content-type (or content-type (drakma:header-value :content-type headers))
+                                           :content-encoding (or (drakma:header-value :content-encoding headers) "identity")))
+
 (defun put-url (path url &key content-type)
-  (multiple-value-bind (body-stream status-code headers _uri _stream _must-close reason-phrase)
-      (drakma:http-request url :want-stream t  :force-binary t)
-    (declare (ignore _uri _stream _must-close))
-    (unless (and (< status-code 300)
-                 (>= status-code 200))      
-      (error 'cl-dropbox-api-bad-input (make-instance 'response :body #?"Request to ${url} failed with reason: ${reason-phrase}" :headers headers :status-code status-code)))
-    (let* ((content-length (and (drakma:header-value :content-length headers) (parse-integer (drakma:header-value :content-length headers))))
-           (stream (if content-length
-                       (flexi-streams:flexi-stream-stream body-stream)
-                       (let* ((body-bytes (drakma::read-body body-stream headers nil)))
-                         (flexi-streams:make-in-memory-input-stream body-bytes)))))
-      (unwind-protect
-           (put-stream path stream content-length :content-type (or content-type (drakma:header-value :content-type headers))
-                                                  :content-encoding (or (drakma:header-value :content-encoding headers) "identity")))
-      (close body-stream)
-      (close stream))))
+  (with-url-binary-stream (stream url headers content-length)
+    (put-stream path stream content-length :content-type (or content-type (drakma:header-value :content-type headers))
+                                           :content-encoding (or (drakma:header-value :content-encoding headers) "identity"))))
+
 
 (define-api-call (metadata (path) ("file_limit"
                                    "hash"
