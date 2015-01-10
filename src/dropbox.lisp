@@ -166,7 +166,7 @@
 (defmacro with-url-binary-stream ((stream-var url headers content-length) &body body)
   (alexandria:with-gensyms (body-stream status-code _uri _stream _must-close reason-phrase body-bytes)
     `(multiple-value-bind (,body-stream ,status-code ,headers ,_uri ,_stream ,_must-close ,reason-phrase)
-         (drakma:http-request ,url :want-stream t  :force-binary t)
+         (drakma:http-request (escape ,url "/:") :want-stream t  :force-binary t)
        (declare (ignore ,_uri ,_stream ,_must-close))
        (unless (and (< ,status-code 300)
                     (>= ,status-code 200))
@@ -181,10 +181,6 @@
                 ,@body))
          (close ,body-stream)
          (close ,stream-var)))))
-
-(with-url-binary-stream (stream url headers content-length)
-    (put-stream path stream content-length :content-type (or content-type (drakma:header-value :content-type headers))
-                                           :content-encoding (or (drakma:header-value :content-encoding headers) "identity")))
 
 (defun put-url (path url &key content-type)
   (with-url-binary-stream (stream url headers content-length)
