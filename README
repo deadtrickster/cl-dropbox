@@ -1,5 +1,1 @@
 Dropbox Core SDK for Common Lisp
-
-A Common Lisp library that for Dropbox's HTTP-based Core API.
-
-   http://deadtrickster.github.io/cl-dropbox
