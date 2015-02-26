@@ -16,6 +16,7 @@
            #:cl-dropbox-api-too-many-requests
            #:cl-dropbox-api-oauth1.0-rate-limited
            #:cl-dropbox-api-transient-server-error
+           #:cl-dropbox-api-server-error
            #:cl-dropbox-api-over-quota
            #:cl-dropbox-api-error-non-standard))
 
@@ -52,6 +53,9 @@
   ())
 
 (define-condition cl-dropbox-api-transient-server-error (cl-dropbox-api-error)
+  ())
+
+(define-condition cl-dropbox-api-server-error (cl-dropbox-api-error)
   ())
 
 (define-condition cl-dropbox-api-over-quota (cl-dropbox-api-error)
