@@ -17,7 +17,7 @@
 (defun escape (str &optional (safe "/"))
   "URI encodes/escapes the given string."
   (with-output-to-string (s)
-    (loop for c across (flexi-streams:string-to-octets str :external-format :latin-1)
+    (loop for c across (flexi-streams:string-to-octets str :external-format :utf-8)
           do (if (or (find (code-char c) safe)
                      (<= 48 c 57)
                      (<= 65 c 90)
